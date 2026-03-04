@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Data Sources & Attribution
+
+This project uses the following data sources:
+
+- **Satellite Imagery**: [Copernicus Sentinel-2](https://sentinel.esa.int/web/sentinel/missions/sentinel-2) - Contains modified Copernicus Sentinel data, processed by ESA
+- **Map Tiles**: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
+- **Land Boundaries**: [Natural Earth](https://www.naturalearthdata.com/) (Public Domain)
+
 ## Getting Started
 
 First, run the development server:
