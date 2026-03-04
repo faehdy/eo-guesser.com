@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import type L from "leaflet";
 import { calculateDistance, calculateScore, formatDistance } from "@/lib/scoring";
+import InfoButton from "@/components/InfoButton";
 
 // Leaflet must only be rendered client-side (it uses window)
 const GameMap = dynamic(() => import("@/components/GameMap"), { ssr: false });
@@ -91,8 +92,11 @@ export default function Home() {
           </span>
           <span className="text-sm text-gray-400">Round {round}</span>
         </div>
-        <div className="text-sm font-semibold text-yellow-300">
-          Score: {totalScore.toLocaleString()}
+        <div className="flex items-center gap-3">
+          <div className="text-sm font-semibold text-yellow-300">
+            Score: {totalScore.toLocaleString()}
+          </div>
+          <InfoButton />
         </div>
       </header>
 
