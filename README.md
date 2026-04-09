@@ -4,7 +4,8 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 This project uses the following data sources:
 
-- **Satellite Imagery**: [Copernicus Sentinel-2](https://sentinel.esa.int/web/sentinel/missions/sentinel-2) - Contains modified Copernicus Sentinel data, processed by ESA
+- **Optical Imagery**: [Copernicus Sentinel-2](https://sentinel.esa.int/web/sentinel/missions/sentinel-2) - Contains modified Copernicus Sentinel data, processed by ESA
+- **SAR Imagery**: [Copernicus Sentinel-1](https://sentinel.esa.int/web/sentinel/missions/sentinel-1) - Contains modified Copernicus Sentinel data, processed by ESA
 - **Map Tiles**: © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors
 - **Land Boundaries**: [Natural Earth](https://www.naturalearthdata.com/) (Public Domain)
 

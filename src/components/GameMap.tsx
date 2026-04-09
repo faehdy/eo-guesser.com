@@ -6,6 +6,7 @@ import {
   TileLayer,
   Marker,
   Polyline,
+  ScaleControl,
   useMapEvents,
 } from "react-leaflet";
 import L from "leaflet";
@@ -91,6 +92,8 @@ export default function GameMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      <ScaleControl position="bottomleft" imperial={false} />
 
       <ClickHandler onMapClick={onMapClick} enabled={!revealed} />
 

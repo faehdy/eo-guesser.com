@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type L from "leaflet";
 import { calculateDistance, calculateScore, formatDistance } from "@/lib/scoring";
@@ -10,13 +10,39 @@ import InfoButton from "@/components/InfoButton";
 const GameMap = dynamic(() => import("@/components/GameMap"), { ssr: false });
 
 type GameState = "loading" | "guessing" | "revealed";
+type ImageryMode = "optical" | "sar";
 
 interface LocationData {
   coordinates: [number, number];
   imageUrl: string;
   date: string;
-  cloudCover: number;
+  cloudCover: number | null;
   itemId: string;
+  mode: ImageryMode;
+}
+
+const IMAGE_BBOX_WIDTH_DEGREES = 0.1; // API requests ±0.05° around center
+const ZOOM_FACTOR = 2.5;
+
+function roundScaleDistanceKm(distanceKm: number): number {
+  if (distanceKm <= 0) return 0;
+  const exponent = Math.floor(Math.log10(distanceKm));
+  const base = distanceKm / 10 ** exponent;
+
+  let roundedBase = 1;
+  if (base >= 5) roundedBase = 5;
+  else if (base >= 2) roundedBase = 2;
+
+  return roundedBase * 10 ** exponent;
+}
+
+function formatScaleDistance(distanceKm: number): string {
+  if (distanceKm >= 1) {
+    return `${distanceKm >= 10 ? Math.round(distanceKm) : distanceKm.toFixed(1)} km`;
+  }
+
+  const meters = distanceKm * 1000;
+  return `${Math.round(meters)} m`;
 }
 
 export default function Home() {
@@ -29,9 +55,17 @@ export default function Home() {
   const [totalScore, setTotalScore] = useState(0);
   const [round, setRound] = useState(1);
   const [zoom, setZoom] = useState(false);
+  const [imageryMode, setImageryMode] = useState<ImageryMode>("optical");
+  const [showModeDialog, setShowModeDialog] = useState(true);
+  const [imageWidthPx, setImageWidthPx] = useState<number>(0);
   const imgRef = useRef<HTMLImageElement>(null);
 
-  const fetchLocation = useCallback(async () => {
+  const updateImageWidth = useCallback(() => {
+    if (!imgRef.current) return;
+    setImageWidthPx(imgRef.current.clientWidth);
+  }, []);
+
+  const fetchLocation = useCallback(async (mode: ImageryMode) => {
     setGameState("loading");
     setGuessLatLng(null);
     setScore(null);
@@ -40,7 +74,7 @@ export default function Home() {
     setZoom(false);
 
     try {
-      const res = await fetch("/api/get-location");
+      const res = await fetch(`/api/get-location?mode=${mode}`);
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data: LocationData = await res.json();
       if ("error" in data) throw new Error((data as unknown as { error: string }).error);
@@ -50,12 +84,6 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "Failed to load location");
       setGameState("loading");
     }
-  }, []);
-
-  // Start first round on mount
-  useEffect(() => {
-    fetchLocation();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleMapClick = useCallback((latlng: L.LatLng) => {
@@ -79,8 +107,52 @@ export default function Home() {
 
   const handleNextRound = useCallback(() => {
     setRound((r) => r + 1);
-    fetchLocation();
+    fetchLocation(imageryMode);
+  }, [fetchLocation, imageryMode]);
+
+  const handleModeChange = useCallback((mode: ImageryMode) => {
+    if (mode === imageryMode) return;
+    setImageryMode(mode);
+    setRound(1);
+    setTotalScore(0);
+    fetchLocation(mode);
+  }, [fetchLocation, imageryMode]);
+
+  const handleStartWithMode = useCallback((mode: ImageryMode) => {
+    setImageryMode(mode);
+    setRound(1);
+    setTotalScore(0);
+    setShowModeDialog(false);
+    fetchLocation(mode);
   }, [fetchLocation]);
+
+  useEffect(() => {
+    window.addEventListener("resize", updateImageWidth);
+    return () => window.removeEventListener("resize", updateImageWidth);
+  }, [updateImageWidth]);
+
+  const imageScale = useMemo(() => {
+    if (!location || imageWidthPx <= 0) return null;
+
+    const latDeg = location.coordinates[1];
+    const kmPerDegreeLon = 111.32 * Math.cos((latDeg * Math.PI) / 180);
+    const footprintWidthKm = Math.max(0, kmPerDegreeLon * IMAGE_BBOX_WIDTH_DEGREES);
+    if (!Number.isFinite(footprintWidthKm) || footprintWidthKm <= 0) return null;
+
+    const visibleImageWidthPx = imageWidthPx * (zoom ? ZOOM_FACTOR : 1);
+    const kmPerPx = footprintWidthKm / visibleImageWidthPx;
+    if (!Number.isFinite(kmPerPx) || kmPerPx <= 0) return null;
+
+    const targetBarPx = 100;
+    const rawDistanceKm = kmPerPx * targetBarPx;
+    const roundedDistanceKm = roundScaleDistanceKm(rawDistanceKm);
+    const barWidthPx = roundedDistanceKm / kmPerPx;
+
+    return {
+      label: formatScaleDistance(roundedDistanceKm),
+      widthPx: Math.max(40, Math.min(180, barWidthPx)),
+    };
+  }, [location, imageWidthPx, zoom]);
 
   return (
     <div className="flex flex-col h-screen bg-gray-950 text-white">
@@ -93,6 +165,30 @@ export default function Home() {
           <span className="text-sm text-gray-400">Round {round}</span>
         </div>
         <div className="flex items-center gap-3">
+          <div className="flex items-center rounded-lg border border-gray-700 overflow-hidden text-xs">
+            <button
+              onClick={() => handleModeChange("optical")}
+              className={`px-2 py-1 transition-colors ${
+                imageryMode === "optical"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+              aria-pressed={imageryMode === "optical"}
+            >
+              Optical
+            </button>
+            <button
+              onClick={() => handleModeChange("sar")}
+              className={`px-2 py-1 transition-colors ${
+                imageryMode === "sar"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+              }`}
+              aria-pressed={imageryMode === "sar"}
+            >
+              SAR
+            </button>
+          </div>
           <div className="text-sm font-semibold text-yellow-300">
             Score: {totalScore.toLocaleString()}
           </div>
@@ -130,7 +226,7 @@ export default function Home() {
                 <div className="text-red-400 text-sm max-w-xs text-center">
                   {error}
                   <button
-                    onClick={fetchLocation}
+                    onClick={() => fetchLocation(imageryMode)}
                     className="block mt-2 px-4 py-1 bg-emerald-600 rounded-lg text-white text-sm hover:bg-emerald-700"
                   >
                     Retry
@@ -146,14 +242,26 @@ export default function Home() {
               <img
                 ref={imgRef}
                 src={location.imageUrl}
-                alt="Sentinel-2 satellite image"
+                alt={location.mode === "sar" ? "Sentinel-1 SAR image" : "Sentinel-2 satellite image"}
                 className={`max-h-full max-w-full object-contain cursor-zoom-in transition-transform duration-300 ${
                   zoom ? "scale-[2.5] cursor-zoom-out" : ""
                 }`}
+                onLoad={updateImageWidth}
                 onClick={() => setZoom((z) => !z)}
               />
+              {imageScale && (
+                <div className="absolute top-2 left-2 bg-black/60 rounded-lg px-2 py-1 text-xs text-gray-200 backdrop-blur-sm">
+                  <div
+                    className="h-1 bg-gray-100 rounded"
+                    style={{ width: `${imageScale.widthPx}px` }}
+                  />
+                  <div className="mt-1">~ {imageScale.label}</div>
+                </div>
+              )}
               <div className="absolute bottom-2 left-2 bg-black/60 rounded-lg px-2 py-1 text-xs text-gray-300 backdrop-blur-sm">
-                📅 {location.date} &nbsp;☁️ {location.cloudCover}% cloud cover
+                {location.mode === "sar"
+                  ? `📡 Radar date: ${location.date}`
+                  : `📅 ${location.date}  ☁️ ${location.cloudCover ?? 0}% cloud cover`}
               </div>
               <div className="absolute top-2 right-2 bg-black/60 rounded-lg px-2 py-1 text-xs text-gray-400 backdrop-blur-sm">
                 Click image to zoom
@@ -219,6 +327,48 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {showModeDialog && (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-2xl p-6 shadow-2xl">
+            <h2 className="text-2xl font-bold text-emerald-400">Choose Imagery Mode</h2>
+            <p className="mt-2 text-sm text-gray-300">
+              Select a mode to start your round. You can switch later in the header.
+            </p>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-4">
+                <h3 className="font-semibold text-white">Optical (Visual)</h3>
+                <p className="mt-2 text-xs text-gray-300">
+                  Uses reflected sunlight, similar to natural-color photos. Helpful for
+                  recognizing vegetation, coastlines, urban shapes, snow, and deserts.
+                </p>
+                <button
+                  onClick={() => handleStartWithMode("optical")}
+                  className="mt-4 w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 font-semibold transition-colors"
+                >
+                  Start in Optical
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-gray-700 bg-gray-800/60 p-4">
+                <h3 className="font-semibold text-white">SAR (Radar)</h3>
+                <p className="mt-2 text-xs text-gray-300">
+                  Active microwave sensor that works day/night and through most clouds.
+                  Displayed here in grayscale: brighter means stronger backscatter,
+                  darker usually means smoother surfaces like calm water.
+                </p>
+                <button
+                  onClick={() => handleStartWithMode("sar")}
+                  className="mt-4 w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold transition-colors"
+                >
+                  Start in SAR
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

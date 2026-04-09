@@ -36,6 +36,24 @@ export default function InfoButton() {
               </p>
 
               <div>
+                <h3 className="font-semibold text-white mb-2">Visual vs SAR: Quick Guide</h3>
+                <ul className="space-y-2 text-xs">
+                  <li>
+                    <strong className="text-emerald-400">Visual (Optical):</strong>{" "}
+                    Captures reflected sunlight, similar to a photo. Colors and textures
+                    help identify vegetation, deserts, snow, coasts, and cities.
+                  </li>
+                  <li>
+                    <strong className="text-emerald-400">SAR (Radar):</strong>{" "}
+                    Actively sends microwaves and measures backscatter, so it works day
+                    and night and through clouds. In this game it is shown in
+                    grayscale: brighter usually means stronger surface roughness or
+                    structure, darker means smoother surfaces like calm water.
+                  </li>
+                </ul>
+              </div>
+
+              <div>
                 <h3 className="font-semibold text-white mb-2">Data Sources & Attribution</h3>
                 <ul className="space-y-2 text-xs">
                   <li>
@@ -47,6 +65,18 @@ export default function InfoButton() {
                       className="text-blue-400 hover:underline"
                     >
                       Copernicus Sentinel-2
+                    </a>{" "}
+                    - Contains modified Copernicus Sentinel data, processed by ESA
+                  </li>
+                  <li>
+                    <strong className="text-emerald-400">SAR Imagery:</strong>{" "}
+                    <a
+                      href="https://sentinel.esa.int/web/sentinel/missions/sentinel-1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Copernicus Sentinel-1
                     </a>{" "}
                     - Contains modified Copernicus Sentinel data, processed by ESA
                   </li>
@@ -80,7 +110,7 @@ export default function InfoButton() {
               <div className="pt-2 border-t border-gray-800 text-xs text-gray-500">
                 <p>
                   This game uses freely available Earth observation data to help
-                  people learn about our planet.
+                  people learn about our planet and how it can be observed from space.
                 </p>
               </div>
             </div>
