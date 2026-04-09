@@ -334,6 +334,8 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-emerald-400">Disclaimer and Choose Imagery Mode</h2>
             <p className="mt-2 text-sm text-gray-300">
               This game is a hobbie project and still in the alpha testing phase. The satellite images are randomly fetched from the Sentinel-1 (SAR) and Sentinel-2 (optical) missions, so you might occasionally encounter locations that are hard to guess or have less interesting visuals.
+              <br />
+              <br />
 
               Select a mode to start your round. You can switch later in the header.
             </p>
