@@ -331,9 +331,14 @@ export default function Home() {
       {showModeDialog && (
         <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
           <div className="w-full max-w-2xl bg-gray-900 border border-gray-700 rounded-2xl p-6 shadow-2xl">
-            <h2 className="text-2xl font-bold text-emerald-400">Choose Imagery Mode</h2>
+            <h2 className="text-2xl font-bold text-emerald-400">Disclaimer and Choose Imagery Mode</h2>
             <p className="mt-2 text-sm text-gray-300">
+              This game is a hobbie project and still in the alpha testing phase. The satellite images are randomly fetched from the Sentinel-1 (SAR) and Sentinel-2 (optical) missions, so you might occasionally encounter locations that are hard to guess or have less interesting visuals.
+
               Select a mode to start your round. You can switch later in the header.
+            </p>
+            <p className="mt-2 text-xs text-gray-400">
+              Note: Arctic-region locations are intentionally sampled with lower probability.
             </p>
 
             <div className="mt-5 grid gap-3 md:grid-cols-2">
